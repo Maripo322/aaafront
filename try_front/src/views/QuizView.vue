@@ -2,12 +2,16 @@
   <div>
     <h1>Вопрос дня</h1>
 
+    <!-- Ошибка формата ответа -->
+    <div v-if="loadError">
+      <p style="color: red;">Ошибка загрузки вопроса: {{ loadError }}</p>
+    </div>
+
     <!-- Когда вопрос загружен -->
-    <div v-if="word">
+    <div v-else-if="word">
       <p><strong>Английское слово:</strong> {{ word.word_eng }}</p>
       <p><strong>Повторение:</strong> {{ word.was_in_repeat ? 'Да' : 'Нет' }}</p>
 
-      <!-- Варианты ответа -->
       <div class="options">
         <button
           v-for="opt in options"
@@ -19,7 +23,6 @@
         </button>
       </div>
 
-      <!-- Результат ответа -->
       <p v-if="answered">
         <strong>{{ feedback }}</strong>
       </p>
@@ -42,44 +45,49 @@ export default {
       options: [],
       tg_id: null,
       answered: false,
-      feedback: ''
+      feedback: '',
+      loadError: ''
     }
   },
   async mounted() {
-    // Получаем tg_id так же, как в main.js
     this.tg_id = localStorage.getItem('tg_id')
     if (!this.tg_id) {
       console.error('tg_id не найден')
+      this.loadError = 'tg_id отсутствует'
       return
     }
     this.loadQuiz()
   },
   methods: {
-    // Загрузка одного вопроса с вариантами
     async loadQuiz() {
       this.answered = false
       this.feedback = ''
+      this.loadError = ''
       try {
         const response = await axios.get(`/api/quiz/${this.tg_id}`)
-        // ожидаем { word: {...}, options: [...] }
-        this.word = response.data.word
-        this.options = response.data.options
+        console.log('Ответ /api/quiz:', response.data)
+        // Если пришёл ожидаемый формат
+        if (response.data.word && Array.isArray(response.data.options)) {
+          this.word = response.data.word
+          this.options = response.data.options
+        } else {
+          // Плохо: бэкенд вернул не то
+          this.loadError = 'Неправильный формат ответа от API'
+          console.error('Неправильный формат ответа:', response.data)
+        }
       } catch (error) {
         console.error('Ошибка при получении задания:', error)
+        this.loadError = 'Сетевая ошибка или сервер недоступен'
       }
     },
 
-    // Обработка клика по варианту
     async submitAnswer(opt) {
       this.answered = true
       const isCorrect = opt.word_id === this.word.word_id
-
-      // Формируем фидбэк
       this.feedback = isCorrect
         ? 'Правильно! 🎉'
         : `Неправильно 😕. Правильный ответ: ${this.word.word_rus}`
 
-      // Отправляем на сервер
       try {
         await axios.post('/api/answer', {
           tg_id: this.tg_id,
@@ -91,7 +99,6 @@ export default {
         console.error('Ошибка отправки ответа:', error)
       }
 
-      // Через 2 секунды загружаем следующий вопрос
       setTimeout(this.loadQuiz, 2000)
     }
   }

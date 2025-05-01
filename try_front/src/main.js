@@ -5,7 +5,7 @@ import axios from 'axios'
 
 const app = createApp(App)
 
-axios.defaults.baseURL = 'https://silver-space-disco-g4r4w6j99rg7fwgrw-8000.app.github.dev/' 
+axios.defaults.baseURL = 'https://effective-space-chainsaw-wr5rjxp664qrf5qjx-8000.app.github.dev/' 
 
 // Получаем tg_id один раз и сохраняем
 const tg = window.Telegram.WebApp
